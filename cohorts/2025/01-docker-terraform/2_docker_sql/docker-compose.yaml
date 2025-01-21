@@ -1,0 +1,33 @@
+services:
+    postgres:
+      image: postgres:17-alpine
+      container_name: postgres
+      environment:
+        POSTGRES_USER: 'postgres'
+        POSTGRES_PASSWORD: 'postgres'
+        POSTGRES_DB: 'ny_taxi'
+      #ports:
+      #  - '5432:5432'
+      volumes:
+        #- vol-pgdata:/var/lib/postgresql/data
+        - postgres -db-volume:/var/lib/postgresql/data
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U postgres"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+      restart: on-failure
+  
+  #volumes:
+  #  vol-pgdata:
+  #    name: vol-pgdata
+
+
+ docker run -it \
+  -e POSTGRES_DB=ny_taxi \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -v $(pwd)/my_taxi_postgres_data:/var/lib/postgresql/data \
+  -p 5432:5432 \
+  --name pgdatabase \
+  postgres:17-alpine
