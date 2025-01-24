@@ -31,3 +31,5 @@ services:
   -p 5432:5432 \
   --name pgdatabase \
   postgres:17-alpine
+
+https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_green.pdf
