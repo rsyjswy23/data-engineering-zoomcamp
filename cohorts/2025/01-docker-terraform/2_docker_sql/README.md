@@ -36,8 +36,8 @@ pgcli -h localhost -p 5432 -u postgres -d ny_taxi
 ### NY Trips Dataset
 
 Dataset:
-* 
-* 
+* https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-10.csv.gz
+* https://github.com/DataTalksClub/nyc-tlc-data/releases/download/misc/taxi_zone_lookup.csv
 
 
 ### Jupyter Notebook
@@ -109,4 +109,47 @@ Putting the ingestion script into Docker
 
 ```bash
 jupyter nbconvert --to=script upload-data.ipynb
+```
+
+Use argparse to paratetrizing the script and run
+
+```bash
+URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-10.csv.gz"
+
+python ingest_data.py \
+  --user=postgres \
+  --password=postgres \
+  --host=localhost \
+  --port=5432 \
+  --db=ny_taxi \
+  --table_name=green_taxi_data \
+  --url=${URL}
+```
+
+Dockerizing the ingestion script
+
+```bash
+    docker build -t taxi_ingest:v001 .
+```
+
+After all, run docker image in the pg-network.
+
+```bash
+    URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-10.csv.gz"
+    docker run -it \
+        --network=pg-network \
+        taxi_ingest:v001 \
+            --user=postgres \
+            --password=postgres \
+            --host=pg-database \
+            --port=5432 \
+            --db=ny_taxi \
+            --table_name=green_taxi_data \
+            --url=${URL}
+```
+
+Launch HTTP server 
+
+```base
+    python -m http.server
 ```
