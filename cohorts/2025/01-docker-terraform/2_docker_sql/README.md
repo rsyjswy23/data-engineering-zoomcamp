@@ -97,3 +97,16 @@ docker run -it \
   dpage/pgadmin4
 ```
 !(01-docker-terraform/2_docker_sql/pgAdmin_Screenshot.jpg)
+
+
+### Data ingestion
+
+Putting the ingestion script into Docker
+
+* Converting the Jupyter notebook to a Python script
+* Parametrizing the script with argparse
+* Dockerizing the ingestion script
+
+```bash
+jupyter nbconvert --to=script upload-data.ipynb
+```
