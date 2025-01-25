@@ -33,3 +33,10 @@ services:
   postgres:17-alpine
 
 https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_green.pdf
+
+
+docker run -it \
+  -e PGADMIN_DEFAULT_EMAIL="pgadmin@pgadmin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="pgadmin" \
+  -p 8080:80 \
+  dpage/pgadmin4
