@@ -1,66 +1,53 @@
 services:
-    postgres:
-      image: postgres:17-alpine
-      container_name: postgres
-      environment:
-        POSTGRES_USER: 'postgres'
-        POSTGRES_PASSWORD: 'postgres'
-        POSTGRES_DB: 'ny_taxi'
-      #ports:
-      #  - '5432:5432'
-      volumes:
-        #- vol-pgdata:/var/lib/postgresql/data
-        - postgres -db-volume:/var/lib/postgresql/data
-      healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]
-        interval: 5s
-        timeout: 5s
-        retries: 5
-      restart: on-failure
-  
-  #volumes:
-  #  vol-pgdata:
-  #    name: vol-pgdata
+  pgdatabase:
+    image: postgres:17-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_DB: 'ny_taxi'
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./ny_taxi_postgres_data:/var/lib/postgresql/data
+    networks:
+      - pg-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "pgadmin@pgadmin.com"
+      PGADMIN_DEFAULT_PASSWORD: "pgadmin"
+    ports:
+      - "8080:80"
+    volumes:
+      - vol-pgadmin_data:/var/lib/pgadmin  
+    networks:
+      - pg-network
+    depends_on:
+      pgdatabase:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:80/ || exit 1"]
+      start_period: 10s
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    restart: on-failure:5
 
- docker run -it \
-  -e POSTGRES_DB=ny_taxi \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
-  -p 5432:5432 \
-  --name pgdatabase \
-  postgres:17-alpine
+volumes:
+  vol-pgdata:
+    name: vol-pgdata
+  vol-pgadmin_data:
+    name: vol-pgadmin_data
 
-https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_green.pdf
-
-
-docker run -it \
-  -e PGADMIN_DEFAULT_EMAIL="pgadmin@pgadmin.com" \
-  -e PGADMIN_DEFAULT_PASSWORD="pgadmin" \
-  -p 8080:80 \
-  dpage/pgadmin4
-
-
-URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-10.csv.gz"
-python ingest_data.py \
-  --user=postgres \
-  --password=postgres \
-  --host=localhost \
-  --port=5432 \
-  --db=ny_taxi \
-  --table_name=green_taxi_data \
-  --url=${URL}
-
-docker build -t taxi_ingest:v001 .
-
-URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/green/green_tripdata_2019-10.csv.gz"
-docker run -it taxi_ingest:v001 \
-  --network=pg-network \
-    --user=postgres \
-    --password=postgres \
-    --host=pgdatabase \
-    --port=5432 \
-    --db=ny_taxi \
-    --table_name=green_taxi_data \
-    --url=${URL}
+networks:
+  pg-network:
+    name: pg-network

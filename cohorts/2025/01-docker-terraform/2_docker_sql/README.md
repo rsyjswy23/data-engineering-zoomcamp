@@ -153,3 +153,30 @@ Launch HTTP server
 ```base
     python -m http.server
 ```
+
+
+### Running Postgres and pgAdmin with Docker-Compose
+
+Update Dockerfile with Docker-Compose to avoid running docker command for postgres, pgadmin and creating network seperately.
+
+Update configuration file docker-compose.yml
+
+Make sure to correct volume mount to parent directory that containing data files, but the file itself. 
+
+```bash
+    volumes:
+      - ./ny_taxi_postgres_data:/var/lib/postgresql/data
+```
+ ./ny_taxi_postgres_data and vol-pgdata achieve the same goal of mounting data to postgres container, but one uses local folder to store data and the other one uses a "virtual usb". 
+
+ 
+Stop and remove all containers, and remember to remove pg-network, and then spin up the contain:
+```bash
+   docker network rm pg-network
+   docker-compose up
+```
+!(01-docker-terraform/2_docker_sql/container.jpg)
+
+And reconfigure pgadmin server.
+
+!(01-docker-terraform/2_docker_sql/reconfigure.jpg)
