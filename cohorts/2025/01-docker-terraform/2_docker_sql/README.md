@@ -175,7 +175,7 @@ Stop and remove all containers, and remember to remove pg-network, and then spin
    docker network rm pg-network
    docker-compose up
 ```
-![container](screenshots/container.jpeg)
+![container](01-docker-terraform/2_docker_sql/screenshots/container.jpg)
 
 And reconfigure pgadmin server.
 
