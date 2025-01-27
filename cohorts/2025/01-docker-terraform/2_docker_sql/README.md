@@ -175,7 +175,7 @@ Stop and remove all containers, and remember to remove pg-network, and then spin
    docker network rm pg-network
    docker-compose up
 ```
-![container](01-docker-terraform/2_docker_sql/screenshots/container.jpg)
+![container](/Users/hui/Documents/GitHub/data-engineering-zoomcamp/cohorts/2025/01-docker-terraform/2_docker_sql/screenshots/container.jpg)
 
 And reconfigure pgadmin server.
 
@@ -224,3 +224,4 @@ LIMIT 100;
 ![qry1](screenshots/qry1.jpeg)
 
 
+2. 
