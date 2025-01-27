@@ -127,6 +127,7 @@ python ingest_data.py \
 ```
 
 Dockerizing the ingestion script
+Remember ingestion script locates inside the network and it directly communicates to Postgres DB, not the localhost. So it listens to port 5432 at Postgres DB.
 
 ```bash
     docker build -t taxi_ingest:v001 .
@@ -200,20 +201,22 @@ df_zones.to_sql(name='zones', con=engine, if_exists='replace')
 
 Once done, go to http://localhost:8080/browser/ to access pgAdmin.
 
-Sample Query + Results:
+Sample Query + Results: tutorial video [text](https://www.youtube.com/watch?v=QEcps_iskgg&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=11)
 
-1. Inner join. 
+# 1. Inner join (both implicit and explicit)
 Best practics: create separate alias for the same table zones to extract different columns.
 
+Joining Taxi table with Zones table (implicit INNER JOIN)
+ 
 ```sql
 SELECT
-    tpep_pickup_datetime,
-    tpep_dropoff_datetime,
+    lpep_pickup_datetime,
+    lpep_dropoff_datetime,
     total_amount,
     CONCAT(zpu."Borough", ' | ', zpu."Zone") AS "pickup_loc",
     CONCAT(zdo."Borough", ' | ', zdo."Zone") AS "dropff_loc"
 FROM 
-    yellow_taxi_trips t,
+    green_taxi_data t,
     zones zpu,
     zones zdo
 WHERE
@@ -221,7 +224,196 @@ WHERE
     AND t."DOLocationID" = zdo."LocationID"
 LIMIT 100;
 ```
+
+Joining Taxi table with Zones table (Explicit INNER JOIN)
+
+```sql
+SELECT
+    lpep_pickup_datetime,
+    lpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", ' | ', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", ' | ', zdo."Zone") AS "dropff_loc"
+FROM 
+    green_taxi_data t
+JOIN 
+-- or INNER JOIN but it's less used, when writing JOIN postgreSQL undranstands implicitly that we want to use an INNER JOIN
+    zones zpu ON t."PULocationID" = zpu."LocationID"
+JOIN
+    zones zdo ON t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+
 ![qry1](screenshots/qry1.jpeg)
 
 
-2. 
+# 2. Check for records with NULL Location IDs in the Taxi table
+
+```sql
+SELECT
+    lpep_pickup_datetime,
+    lpep_dropoff_datetime,
+    total_amount,
+    "PULocationID",
+    "DOLocationID"
+FROM 
+    green_taxi_data t
+WHERE
+    "PULocationID" IS NULL
+    OR "DOLocationID" IS NULL
+LIMIT 100;
+```
+
+# 3. Check for Location IDs in the Zones table NOT IN the green Taxi table
+
+```sql
+SELECT
+    lpep_pickup_datetime,
+    lpep_dropoff_datetime,
+    total_amount,
+    "PULocationID",
+    "DOLocationID"
+FROM 
+    green_taxi_data t
+WHERE
+    "DOLocationID" NOT IN (SELECT "LocationID" from zones)
+    OR "PULocationID" NOT IN (SELECT "LocationID" from zones)
+LIMIT 100;
+```
+
+# 4. Use LEFT, RIGHT, and OUTER JOINS when some Location IDs are not in either Tables
+
+```sql
+DELETE FROM zones WHERE "LocationID" = 142;
+
+SELECT
+    lpep_pickup_datetime,
+    lpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", ' | ', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", ' | ', zdo."Zone") AS "dropff_loc"
+FROM 
+    green_taxi_data t
+-- left join: record will show if it exists on left table.
+LEFT JOIN 
+    zones zpu ON t."PULocationID" = zpu."LocationID"
+JOIN
+    zones zdo ON t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+
+```sql
+SELECT
+    lpep_pickup_datetime,
+    lpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", ' | ', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", ' | ', zdo."Zone") AS "dropff_loc"
+FROM 
+    green_taxi_data t
+-- right join: record will show if it exists on right table.
+RIGHT JOIN 
+    zones zpu ON t."PULocationID" = zpu."LocationID"
+JOIN
+    zones zdo ON t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+
+```sql
+SELECT
+    lpep_pickup_datetime,
+    lpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", ' | ', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", ' | ', zdo."Zone") AS "dropff_loc"
+FROM 
+    green_taxi_data t
+-- outer join: is a combination of left and right join and will show both query results.
+OUTER JOIN 
+    zones zpu ON t."PULocationID" = zpu."LocationID"
+JOIN
+    zones zdo ON t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+
+# 5. Using GROUP BY to calculate number of trips per day
+
+```sql
+SELECT
+    CAST(lpep_dropoff_datetime AS DATE) AS "day",
+    COUNT(1)
+FROM 
+    green_taxi_data t
+GROUP BY
+    CAST(lpep_dropoff_datetime AS DATE)
+LIMIT 100;
+```
+
+# 6. Using ORDER BY to order the results of your query
+
+```sql
+-- Ordering by day
+SELECT
+    CAST(lpep_dropoff_datetime AS DATE) AS "day",
+    COUNT(1)
+FROM 
+    green_taxi_data t
+GROUP BY
+    CAST(lpep_dropoff_datetime AS DATE)
+ORDER BY
+    "day" ASC
+LIMIT 100;
+
+-- Ordering by count
+
+SELECT
+    CAST(lpep_dropoff_datetime AS DATE) AS "day",
+    COUNT(1) AS "count"
+FROM 
+    green_taxi_data t
+GROUP BY
+    CAST(lpep_dropoff_datetime AS DATE)
+ORDER BY
+    "count" DESC
+LIMIT 100;
+```
+
+# 7. Other kinds of aggregations
+
+```sql
+SELECT
+    CAST(lpep_dropoff_datetime AS DATE) AS "day",
+    COUNT(1) AS "count",
+    MAX(total_amount) AS "total_amount",
+    MAX(passenger_count) AS "passenger_count"
+FROM 
+    green_taxi_data t
+GROUP BY
+    CAST(lpep_dropoff_datetime AS DATE)
+ORDER BY
+    "count" DESC
+LIMIT 100;
+```
+
+# 8. Grouping by multiple fields
+
+```sql
+SELECT
+    CAST(lpep_dropoff_datetime AS DATE) AS "day",
+    "DOLocationID",
+    COUNT(1) AS "count",
+    MAX(total_amount) AS "total_amount",
+    MAX(passenger_count) AS "passenger_count"
+FROM 
+    green_taxi_data t
+-- GROUP BY 1, 2 refer to first 2 SELECT. 
+GROUP BY
+    1, 2
+ORDER BY
+    "day" ASC, 
+    "DOLocationID" ASC
+LIMIT 100;
+```
+
+### Port Mapping and Networks in Docker
+![portmapping](screenshots/portmapping.jpeg)
