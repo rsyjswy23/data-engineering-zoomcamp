@@ -96,7 +96,7 @@ docker run -it \
   --name pgadmin \
   dpage/pgadmin4
 ```
-!(01-docker-terraform/2_docker_sql/pgAdmin_Screenshot.jpg)
+![pgAdmin_Screenshot](screenshots/pgAdmin_Screenshot.jpeg)
 
 
 ### Data ingestion
@@ -175,8 +175,52 @@ Stop and remove all containers, and remember to remove pg-network, and then spin
    docker network rm pg-network
    docker-compose up
 ```
-!(01-docker-terraform/2_docker_sql/container.jpg)
+![container](screenshots/container.jpeg)
 
 And reconfigure pgadmin server.
 
-!(01-docker-terraform/2_docker_sql/reconfigure.jpg)
+![reconfigure](screenshots/reconfigure.jpeg)
+
+### SQL Refresher
+
+You can run the following code using Jupyter Notebook to ingest the data for Taxi Zones:
+
+```python
+import pandas as pd
+from sqlalchemy import create_engine
+
+engine = create_engine('postgresql://root:root@localhost:5432/ny_taxi')
+engine.connect()
+
+!wget https://github.com/DataTalksClub/nyc-tlc-data/releases/download/misc/taxi_zone_lookup.csv
+
+df_zones = pd.read_csv("taxi_zone_lookup.csv")
+df_zones.to_sql(name='zones', con=engine, if_exists='replace')
+```
+
+Once done, go to http://localhost:8080/browser/ to access pgAdmin.
+
+Sample Query + Results:
+
+1. Inner join. 
+Best practics: create separate alias for the same table zones to extract different columns.
+
+```sql
+SELECT
+    tpep_pickup_datetime,
+    tpep_dropoff_datetime,
+    total_amount,
+    CONCAT(zpu."Borough", ' | ', zpu."Zone") AS "pickup_loc",
+    CONCAT(zdo."Borough", ' | ', zdo."Zone") AS "dropff_loc"
+FROM 
+    yellow_taxi_trips t,
+    zones zpu,
+    zones zdo
+WHERE
+    t."PULocationID" = zpu."LocationID"
+    AND t."DOLocationID" = zdo."LocationID"
+LIMIT 100;
+```
+![qry1](screenshots/qry1.jpeg)
+
+
